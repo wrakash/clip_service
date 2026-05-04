@@ -1,0 +1,12 @@
+open_clip_torch
+transformers
+torch
+torchvision
+qdrant-client
+kafka-python
+fastapi
+uvicorn[standard]
+opencv-python-headless
+Pillow
+numpy
+httpx

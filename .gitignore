@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Model weights & HuggingFace cache
+*.safetensors
+*.bin
+*.pth
+*.pt
+.cache/
+
+# Logs
+*.log
+
+# Deployment config (copy from config.example.json and fill in your values)
+config.json
+
+# Environment & secrets
+.env
+.env.*
+
+# Claude Code
+.claude/
+
+# OS
+.DS_Store
+Thumbs.db

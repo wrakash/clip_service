@@ -1,0 +1,48 @@
+services:
+  qdrant:
+    image: qdrant/qdrant:latest
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - qdrant_data:/qdrant/storage
+
+  clip_service:
+    build: .
+    image: clip_service
+    restart: unless-stopped
+    runtime: nvidia
+    network_mode: host
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+    volumes:
+      - ./config.json:/clip_service/config.json:ro
+    command: python3 clip_service.py --config config.json
+    depends_on:
+      - qdrant
+
+  search_api:
+    image: clip_service
+    restart: unless-stopped
+    runtime: nvidia
+    network_mode: host
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+    volumes:
+      - ./config.json:/clip_service/config.json:ro
+    command: uvicorn search_api:app --host 0.0.0.0 --port 8000
+    depends_on:
+      - clip_service
+
+  retention:
+    image: clip_service
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - ./config.json:/clip_service/config.json:ro
+    command: python3 retention.py --config config.json --retention-days 7 --interval-hours 1
+    depends_on:
+      - qdrant
+
+volumes:
+  qdrant_data:
+    name: qdrant_storage

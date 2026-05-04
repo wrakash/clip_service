@@ -1,0 +1,25 @@
+{
+    "kafka": {
+        "bootstrap_servers": "KAFKA_HOST:9092",
+        "topic": "person_crops",
+        "group_id": "clip_embedding_service"
+    },
+    "qdrant": {
+        "host": "localhost",
+        "port": 6333,
+        "collection_name": "persons"
+    },
+    "model": {
+        "name": "ViT-SO400M-14-SigLIP-384",
+        "pretrained": "webli"
+    },
+    "batch_size": 32,
+    "batch_timeout_ms": 200,
+    "nvr_base_url": "http://localhost:8009",
+    "sensor_camera_map": {
+        "SENSOR_UUID_1": "entrance",
+        "SENSOR_UUID_2": "office-cam01",
+        "SENSOR_UUID_3": "office-cam02",
+        "SENSOR_UUID_4": "office-cam03"
+    }
+}

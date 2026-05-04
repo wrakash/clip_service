@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Person Search</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --card: #1a1d27;
+    --border: #2a2d3a;
+    --text: #e1e4ed;
+    --muted: #8b8fa3;
+    --accent: #6366f1;
+    --accent-hover: #818cf8;
+    --green: #34d399;
+    --red: #f87171;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* Header */
+  .header {
+    padding: 24px 32px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .header h1 { font-size: 20px; font-weight: 600; }
+  .header .stats {
+    margin-left: auto;
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  /* Search bar */
+  .search-container {
+    padding: 24px 32px;
+    display: flex;
+    gap: 12px;
+    max-width: 800px;
+  }
+  .search-input {
+    flex: 1;
+    padding: 12px 16px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 15px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .search-input:focus { border-color: var(--accent); }
+  .search-input::placeholder { color: var(--muted); }
+  .search-btn {
+    padding: 12px 24px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+    white-space: nowrap;
+  }
+  .search-btn:hover { background: var(--accent-hover); }
+  .search-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* Filters row */
+  .filters {
+    padding: 0 32px 16px;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .filters label { margin-right: 4px; }
+  .filters select, .filters input[type="number"] {
+    padding: 6px 10px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-size: 13px;
+  }
+
+  /* Results grid */
+  .results-info {
+    padding: 0 32px 12px;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .results-grid {
+    padding: 0 32px 32px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 16px;
+  }
+  .result-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    transition: border-color 0.2s;
+  }
+  .result-card:hover { border-color: var(--accent); }
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+  .card-header .camera-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--accent);
+  }
+  .card-header .score {
+    font-size: 13px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 12px;
+    background: rgba(99, 102, 241, 0.15);
+    color: var(--accent);
+  }
+  .card-meta {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px 16px;
+    font-size: 13px;
+    margin-bottom: 14px;
+  }
+  .card-meta dt { color: var(--muted); }
+  .card-meta dd { color: var(--text); }
+  .view-btn {
+    width: 100%;
+    padding: 10px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .view-btn:hover {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+  .view-btn.loading {
+    opacity: 0.5;
+    cursor: wait;
+  }
+
+  /* Modal */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+  }
+  .modal-overlay.active { display: flex; }
+  .modal-content {
+    position: relative;
+    max-width: 90vw;
+    max-height: 90vh;
+  }
+  .modal-content .snapshot-wrapper {
+    position: relative;
+    display: inline-block;
+  }
+  .modal-content img {
+    max-width: 90vw;
+    max-height: 85vh;
+    border-radius: 8px;
+    object-fit: contain;
+    display: block;
+  }
+  .modal-content canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    border-radius: 8px;
+    pointer-events: none;
+  }
+  .modal-info {
+    text-align: center;
+    margin-top: 10px;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .modal-close {
+    position: absolute;
+    top: -12px;
+    right: -12px;
+    width: 32px;
+    height: 32px;
+    background: var(--red);
+    color: #fff;
+    border: none;
+    border-radius: 50%;
+    font-size: 18px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+  }
+  .modal-loading {
+    color: var(--muted);
+    font-size: 16px;
+  }
+
+  /* Empty / Error */
+  .empty-state {
+    text-align: center;
+    padding: 60px 32px;
+    color: var(--muted);
+    font-size: 15px;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Person Search</h1>
+  <div class="stats" id="stats"></div>
+</div>
+
+<div class="search-container">
+  <input type="text" class="search-input" id="queryInput"
+         placeholder="Describe the person... e.g. &quot;person wearing white shirt&quot;"
+         autofocus>
+  <button class="search-btn" id="searchBtn" onclick="doSearch()">Search</button>
+</div>
+
+<div class="filters">
+  <label for="topK">Results:</label>
+  <input type="number" id="topK" value="10" min="1" max="50" style="width:60px">
+  <label for="threshold">Min score:</label>
+  <input type="number" id="threshold" value="0.05" min="0" max="1" step="0.05" style="width:70px">
+  <label for="sortBy">Sort by:</label>
+  <select id="sortBy" onchange="applySortAndRender()">
+    <option value="score">CLIP Score (high first)</option>
+    <option value="score_low">CLIP Score (low first)</option>
+    <option value="time_newest">Time (newest first)</option>
+    <option value="time_oldest">Time (oldest first)</option>
+  </select>
+</div>
+
+<div class="results-info" id="resultsInfo"></div>
+<div class="results-grid" id="resultsGrid"></div>
+<div class="empty-state" id="emptyState">Enter a description to search for persons across all cameras.</div>
+
+<!-- Snapshot Modal -->
+<div class="modal-overlay" id="modal" onclick="closeModal(event)">
+  <div class="modal-content" id="modalContent">
+    <button class="modal-close" onclick="closeModal()">&times;</button>
+    <div class="modal-loading" id="modalLoading">Loading snapshot...</div>
+    <div class="snapshot-wrapper" id="snapshotWrapper" style="display:none">
+      <img id="modalImg" alt="Snapshot">
+      <canvas id="bboxCanvas"></canvas>
+    </div>
+    <div class="modal-info" id="modalInfo"></div>
+  </div>
+</div>
+
+<script>
+const API = window.location.origin;
+let currentBlobUrl = null;
+let lastQuery = '';
+let lastResults = [];
+
+// Load stats on page load
+(async function loadStats() {
+  try {
+    const r = await fetch(`${API}/stats`);
+    const d = await r.json();
+    document.getElementById('stats').textContent =
+      `${d.vectors_count} persons indexed`;
+  } catch(e) {
+    document.getElementById('stats').textContent = 'Qdrant offline';
+  }
+})();
+
+// Enter key triggers search
+document.getElementById('queryInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') doSearch();
+});
+
+async function doSearch() {
+  const query = document.getElementById('queryInput').value.trim();
+  if (!query) return;
+
+  const btn = document.getElementById('searchBtn');
+  btn.disabled = true;
+  btn.textContent = 'Searching...';
+
+  const topK = parseInt(document.getElementById('topK').value) || 10;
+  const threshold = parseFloat(document.getElementById('threshold').value) || 0.15;
+
+  try {
+    const resp = await fetch(`${API}/search`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({query, top_k: topK, score_threshold: threshold})
+    });
+    const results = await resp.json();
+    lastResults = results;
+    lastQuery = query;
+    applySortAndRender();
+  } catch(e) {
+    document.getElementById('resultsInfo').textContent = `Error: ${e.message}`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Search';
+  }
+}
+
+function applySortAndRender() {
+  if (!lastResults.length) return;
+  const sortBy = document.getElementById('sortBy').value;
+  const sorted = [...lastResults];
+  switch (sortBy) {
+    case 'time_newest':
+      sorted.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+      break;
+    case 'time_oldest':
+      sorted.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+      break;
+    case 'score_low':
+      sorted.sort((a, b) => a.score - b.score);
+      break;
+    default: // 'score' — highest CLIP similarity first (API default order)
+      sorted.sort((a, b) => b.score - a.score);
+      break;
+  }
+  renderResults(sorted, lastQuery);
+}
+
+function renderResults(results, query) {
+  const grid = document.getElementById('resultsGrid');
+  const info = document.getElementById('resultsInfo');
+  const empty = document.getElementById('emptyState');
+
+  if (!results.length) {
+    grid.innerHTML = '';
+    info.textContent = '';
+    empty.textContent = `No matches found for "${query}"`;
+    empty.style.display = 'block';
+    return;
+  }
+
+  empty.style.display = 'none';
+  info.textContent = `${results.length} result${results.length > 1 ? 's' : ''} for "${query}"`;
+
+  grid.innerHTML = results.map((r, i) => {
+    const ts = new Date(r.timestamp);
+    const timeStr = ts.toLocaleString();
+    const scorePercent = (r.score * 100).toFixed(1);
+
+    return `
+      <div class="result-card">
+        <div class="card-header">
+          <span class="camera-name">${esc(r.camera_name)}</span>
+          <span class="score">${scorePercent}%</span>
+        </div>
+        <dl class="card-meta">
+          <dt>Tracker ID</dt><dd>${r.tracker_id}</dd>
+          <dt>Confidence</dt><dd>${(r.confidence * 100).toFixed(1)}%</dd>
+          <dt>Timestamp</dt><dd>${timeStr}</dd>
+          <dt>Frame</dt><dd>#${r.frame_number}</dd>
+        </dl>
+        <button class="view-btn" onclick="viewSnapshot(${i})" id="viewBtn${i}">
+          View Snapshot
+        </button>
+      </div>`;
+  }).join('');
+
+  // Store results globally for snapshot fetching
+  window._searchResults = results;
+}
+
+async function viewSnapshot(index) {
+  const r = window._searchResults[index];
+  const btn = document.getElementById(`viewBtn${index}`);
+  btn.classList.add('loading');
+  btn.textContent = 'Loading...';
+
+  const modal = document.getElementById('modal');
+  const img = document.getElementById('modalImg');
+  const wrapper = document.getElementById('snapshotWrapper');
+  const canvas = document.getElementById('bboxCanvas');
+  const loading = document.getElementById('modalLoading');
+  const modalInfo = document.getElementById('modalInfo');
+
+  // Show modal with loading state
+  wrapper.style.display = 'none';
+  loading.style.display = 'block';
+  modal.classList.add('active');
+  modalInfo.textContent = `${r.camera_name} | Tracker #${r.tracker_id} | ${new Date(r.timestamp).toLocaleString()}`;
+
+  try {
+    const url = `${API}/snapshot?camera=${encodeURIComponent(r.camera_name)}&timestamp=${encodeURIComponent(r.timestamp)}&quality=85`;
+    const resp = await fetch(url);
+
+    if (!resp.ok) {
+      const errText = await resp.text();
+      throw new Error(errText || `HTTP ${resp.status}`);
+    }
+
+    const blob = await resp.blob();
+    currentBlobUrl = URL.createObjectURL(blob);
+
+    img.onload = function() {
+      wrapper.style.display = 'inline-block';
+      loading.style.display = 'none';
+
+      // Size canvas to match the displayed image
+      const dispW = img.clientWidth;
+      const dispH = img.clientHeight;
+      canvas.width = dispW;
+      canvas.height = dispH;
+
+      // Draw bounding box — handle both relative (0-1) and legacy absolute coords
+      const bbox = r.bbox;
+      if (bbox && bbox.length === 4) {
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, dispW, dispH);
+
+        // Detect format: if any value > 1.1, treat as absolute pixels on 1280x720
+        const isAbsolute = bbox.some(v => v > 1.1);
+        let rx1, ry1, rx2, ry2;
+        if (isAbsolute) {
+          rx1 = bbox[0] / 1280; ry1 = bbox[1] / 720;
+          rx2 = bbox[2] / 1280; ry2 = bbox[3] / 720;
+        } else {
+          rx1 = bbox[0]; ry1 = bbox[1];
+          rx2 = bbox[2]; ry2 = bbox[3];
+        }
+
+        const bx1 = rx1 * dispW;
+        const by1 = ry1 * dispH;
+        const bx2 = rx2 * dispW;
+        const by2 = ry2 * dispH;
+
+        ctx.strokeStyle = '#6366f1';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(bx1, by1, bx2 - bx1, by2 - by1);
+
+        // Label
+        const label = `#${r.tracker_id}  ${(r.score * 100).toFixed(1)}%`;
+        ctx.font = 'bold 14px sans-serif';
+        const textW = ctx.measureText(label).width;
+        ctx.fillStyle = '#6366f1';
+        ctx.fillRect(bx1, by1 - 22, textW + 10, 22);
+        ctx.fillStyle = '#fff';
+        ctx.fillText(label, bx1 + 5, by1 - 6);
+      }
+    };
+    img.src = currentBlobUrl;
+  } catch(e) {
+    loading.textContent = `Failed to load snapshot: ${e.message}`;
+  } finally {
+    btn.classList.remove('loading');
+    btn.textContent = 'View Snapshot';
+  }
+}
+
+function closeModal(event) {
+  // If clicked on overlay (not content), or close button
+  if (event && event.target !== document.getElementById('modal')) return;
+
+  const modal = document.getElementById('modal');
+  const img = document.getElementById('modalImg');
+  const loading = document.getElementById('modalLoading');
+
+  const wrapper = document.getElementById('snapshotWrapper');
+  modal.classList.remove('active');
+  wrapper.style.display = 'none';
+  img.src = '';
+  loading.style.display = 'block';
+  loading.textContent = 'Loading snapshot...';
+
+  // Release the blob URL to free memory
+  if (currentBlobUrl) {
+    URL.revokeObjectURL(currentBlobUrl);
+    currentBlobUrl = null;
+  }
+}
+
+// Close modal on Escape key
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    closeModal();
+  }
+});
+
+function esc(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+</script>
+
+</body>
+</html>
